@@ -1,0 +1,9 @@
+{
+  "outputDirectory": "public",
+  "rewrites": [
+    { "source": "/media/(.*)", "destination": "/api/media?path=$1" }
+  ],
+  "functions": {
+    "api/media.js": { "maxDuration": 30 }
+  }
+}

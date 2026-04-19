@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Yachts Catalogue</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #171a21;
+    --panel-hover: #1e222b;
+    --border: #262b36;
+    --border-strong: #3a4150;
+    --text: #e6e8ec;
+    --muted: #8a93a6;
+    --accent: #4f8cff;
+    --accent-hover: #3b78f0;
+    --success: #2ea667;
+    --success-hover: #25905a;
+    --selected: #1b2638;
+    --selected-border: #3a6bd4;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+  /* ── Login screen ─────────────────────────────────────── */
+  #login-screen {
+    position: fixed; inset: 0; z-index: 200;
+    background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+  }
+  #login-screen.hidden { display: none; }
+  .login-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 48px 56px;
+    text-align: center;
+    max-width: 380px;
+    width: 100%;
+  }
+  .login-logo { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 6px; }
+  .login-sub { color: var(--muted); font-size: 14px; margin-bottom: 32px; }
+  .login-btn {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: var(--accent); border: none; color: #fff;
+    padding: 11px 24px; border-radius: 7px;
+    font-size: 15px; font-weight: 500; cursor: pointer;
+    font-family: inherit; width: 100%; justify-content: center;
+    transition: background 0.12s;
+  }
+  .login-btn:hover { background: var(--accent-hover); }
+  .login-error { color: #f87171; font-size: 13px; margin-top: 16px; display: none; }
+  .login-error.visible { display: block; }
+
+  /* ── App chrome ───────────────────────────────────────── */
+  #app { display: none; }
+  #app.ready { display: block; }
+  header {
+    position: sticky; top: 0; z-index: 10;
+    background: rgba(15, 17, 21, 0.92);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 24px;
+  }
+  .header-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  h1 { font-size: 18px; margin: 0; font-weight: 600; }
+  .count { color: var(--muted); font-size: 13px; }
+  .spacer { flex: 1; }
+  .search {
+    background: var(--panel); border: 1px solid var(--border);
+    color: var(--text); padding: 8px 12px; border-radius: 6px;
+    font-size: 14px; width: 260px; outline: none;
+  }
+  .search:focus { border-color: var(--accent); }
+  button {
+    background: var(--panel); border: 1px solid var(--border);
+    color: var(--text); padding: 8px 14px; border-radius: 6px;
+    font-size: 13px; cursor: pointer;
+    transition: background 0.12s, border-color 0.12s, color 0.12s;
+    font-family: inherit;
+  }
+  button:hover { background: var(--panel-hover); border-color: var(--border-strong); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 500; }
+  button.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+  button:disabled { opacity: 0.45; cursor: not-allowed; }
+  .user-pill { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+  .user-pill img { width: 26px; height: 26px; border-radius: 50%; }
+
+  main { padding: 20px 24px 60px; max-width: 1400px; margin: 0 auto; }
+
+  .list { display: flex; flex-direction: column; gap: 8px; }
+  .row {
+    display: grid; grid-template-columns: 140px 1fr auto; gap: 16px;
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 8px; overflow: hidden;
+    transition: background 0.12s, border-color 0.12s; align-items: stretch;
+  }
+  .row:hover { background: var(--panel-hover); border-color: var(--border-strong); }
+  .row.selected { background: var(--selected); border-color: var(--selected-border); }
+
+  .thumb {
+    width: 140px; height: 100px; background: #0b0d12;
+    cursor: pointer; overflow: hidden; position: relative;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .thumb .placeholder { color: var(--muted); font-size: 12px; }
+  .thumb .more-badge {
+    position: absolute; bottom: 4px; right: 4px;
+    background: rgba(0,0,0,0.65); color: #fff;
+    font-size: 11px; padding: 2px 6px; border-radius: 10px;
+  }
+
+  .info {
+    display: grid; grid-template-columns: 1.4fr 1fr 0.8fr 1.4fr;
+    gap: 16px; align-items: center; padding: 10px 4px; min-width: 0;
+  }
+  .info > div { min-width: 0; }
+  .field-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 2px; }
+  .field-value { font-size: 14px; color: var(--text); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .name { font-size: 15px; font-weight: 600; }
+  .price { color: #7be6a0; }
+
+  .actions { display: flex; align-items: center; padding-right: 12px; }
+  .add-btn {
+    background: var(--panel); border: 1px solid var(--border-strong);
+    color: var(--text); padding: 8px 14px; border-radius: 6px;
+    font-size: 13px; font-weight: 600; letter-spacing: 0.04em;
+    cursor: pointer; min-width: 76px;
+  }
+  .add-btn:hover { background: var(--panel-hover); }
+  .row.selected .add-btn { background: var(--success); border-color: var(--success); color: #fff; }
+  .row.selected .add-btn:hover { background: var(--success-hover); border-color: var(--success-hover); }
+
+  .loading, .empty { text-align: center; padding: 60px; color: var(--muted); font-size: 14px; }
+  .badge { background: var(--accent); color: #fff; padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: 500; }
+  #sentinel { height: 40px; }
+
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+    display: none; align-items: center; justify-content: center;
+    z-index: 100; padding: 20px;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 10px; max-width: 1100px; width: 100%;
+    max-height: 90vh; display: flex; flex-direction: column; overflow: hidden;
+  }
+  .modal-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 14px 18px; border-bottom: 1px solid var(--border);
+  }
+  .modal-header h2 { margin: 0; font-size: 17px; font-weight: 600; }
+  .modal-close {
+    background: transparent; border: none; color: var(--muted);
+    font-size: 24px; cursor: pointer; padding: 0 8px; line-height: 1;
+  }
+  .modal-close:hover { color: var(--text); background: transparent; }
+  .modal-main { display: flex; flex-direction: column; gap: 10px; padding: 16px; overflow-y: auto; }
+  .hero {
+    width: 100%; height: 460px; background: #0b0d12;
+    border-radius: 6px; display: flex; align-items: center; justify-content: center; overflow: hidden;
+  }
+  .hero img { max-width: 100%; max-height: 100%; object-fit: contain; }
+  .thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 6px; }
+  .thumbs .t {
+    aspect-ratio: 4 / 3; background: #0b0d12;
+    border: 2px solid transparent; border-radius: 4px; overflow: hidden; cursor: pointer;
+  }
+  .thumbs .t.active { border-color: var(--accent); }
+  .thumbs .t img { width: 100%; height: 100%; object-fit: cover; display: block; }
+</style>
+</head>
+<body>
+
+<!-- ── Login screen ──────────────────────────────────────────────────── -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">Sinclair Yachting</div>
+    <div class="login-sub">Internal yacht catalogue</div>
+    <button class="login-btn" id="loginBtn">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      Sign in with your work account
+    </button>
+    <div class="login-error" id="loginError"></div>
+  </div>
+</div>
+
+<!-- ── Main app (hidden until auth passes) ──────────────────────────── -->
+<div id="app">
+  <header>
+    <div class="header-row">
+      <h1>Yachts Catalogue</h1>
+      <span class="count" id="count">Loading…</span>
+      <input class="search" id="search" type="search" placeholder="Search name, country, port…" />
+      <div class="spacer"></div>
+      <span id="selCount" class="badge" style="display:none;">0 selected</span>
+      <button id="clearSel" type="button">Clear</button>
+      <button id="export" class="primary" type="button" disabled>Export selected JSON</button>
+      <div class="user-pill" id="userPill"></div>
+      <button id="logoutBtn" type="button">Sign out</button>
+    </div>
+  </header>
+  <main>
+    <div id="status" class="loading">Loading yachts…</div>
+    <div id="list" class="list" style="display:none;"></div>
+    <div id="sentinel"></div>
+  </main>
+
+  <div class="modal-backdrop" id="modal">
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <h2 id="modalTitle"></h2>
+        <button class="modal-close" id="modalClose" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-main">
+        <div class="hero" id="hero"></div>
+        <div class="thumbs" id="thumbs"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Auth0 SPA SDK -->
+<script src="https://cdn.auth0.com/js/auth0-spa-js/2.1/auth0-spa-js.production.js"></script>
+
+<script>
+// ── Auth0 config — fill these in after creating your Auth0 application ──
+const AUTH0_DOMAIN   = 'dev-0l3e0c5xetigr487.us.auth0.com';       // e.g. "dev-abc123.us.auth0.com"
+const AUTH0_CLIENT_ID = 'Jx43AcugqBMClUDmVoeI3z9ZcNVIoWGX';   // from Auth0 Application settings
+const AUTH0_AUDIENCE  = 'https://yachts.sinclairyachting.com';    // e.g. "https://yachts.sinclairyachting.com"
+
+// ── Auth bootstrap ──────────────────────────────────────────────────────────
+let auth0Client = null;
+
+async function initAuth() {
+  auth0Client = await auth0.createAuth0Client({
+    domain: AUTH0_DOMAIN,
+    clientId: AUTH0_CLIENT_ID,
+    authorizationParams: { redirect_uri: window.location.origin, audience: AUTH0_AUDIENCE },
+    cacheLocation: 'localstorage',
+  });
+
+  // Handle redirect callback after Auth0 login
+  if (window.location.search.includes('code=') && window.location.search.includes('state=')) {
+    await auth0Client.handleRedirectCallback();
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+
+  if (await auth0Client.isAuthenticated()) {
+    const user = await auth0Client.getUser();
+    // Client-side domain guard (Auth0 Action is the authoritative check)
+    if (!user.email?.endsWith('@sinclairyachting.com')) {
+      await auth0Client.logout({ logoutParams: { returnTo: window.location.origin } });
+      return;
+    }
+    showApp(user);
+  } else {
+    showLogin();
+  }
+}
+
+function showLogin() {
+  document.getElementById('login-screen').classList.remove('hidden');
+  document.getElementById('loginBtn').addEventListener('click', () => {
+    auth0Client.loginWithRedirect();
+  });
+}
+
+function showApp(user) {
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('app').classList.add('ready');
+
+  // Show user info + logout
+  const pill = document.getElementById('userPill');
+  if (user.picture) {
+    const img = document.createElement('img');
+    img.src = user.picture;
+    img.alt = user.name || user.email;
+    pill.appendChild(img);
+  }
+  const name = document.createElement('span');
+  name.textContent = user.name || user.email;
+  pill.appendChild(name);
+
+  document.getElementById('logoutBtn').addEventListener('click', () => {
+    auth0Client.logout({ logoutParams: { returnTo: window.location.origin } });
+  });
+
+  runApp();
+}
+
+async function getAuthToken() {
+  return auth0Client.getTokenSilently({ authorizationParams: { audience: AUTH0_AUDIENCE } });
+}
+
+async function authFetch(url, opts = {}) {
+  const token = await getAuthToken();
+  return fetch(url, { ...opts, headers: { ...opts.headers, Authorization: `Bearer ${token}` } });
+}
+
+// Fetch a /media/ URL with auth and return a blob object URL
+async function loadAuthImage(imgEl, mediaSrc) {
+  if (!mediaSrc) return;
+  try {
+    const res = await authFetch(mediaSrc);
+    if (!res.ok) return;
+    const blob = await res.blob();
+    imgEl.src = URL.createObjectURL(blob);
+  } catch {}
+}
+
+// ── Main app ────────────────────────────────────────────────────────────────
+function runApp() {
+  const list      = document.getElementById('list');
+  const status    = document.getElementById('status');
+  const countEl   = document.getElementById('count');
+  const selCountEl = document.getElementById('selCount');
+  const searchEl  = document.getElementById('search');
+  const exportBtn = document.getElementById('export');
+  const clearSelBtn = document.getElementById('clearSel');
+  const sentinel  = document.getElementById('sentinel');
+  const modal     = document.getElementById('modal');
+  const modalClose = document.getElementById('modalClose');
+  const modalTitle = document.getElementById('modalTitle');
+  const hero      = document.getElementById('hero');
+  const thumbsEl  = document.getElementById('thumbs');
+
+  const THUMB_VARIANT = '640w';
+  const HERO_VARIANT  = '1280w';
+  const PAGE_SIZE     = 60;
+  const EXPORT_CONCURRENCY = 8;
+
+  let allYachts  = [];
+  let filtered   = [];
+  let rendered   = 0;
+  const selected    = new Set();
+  const detailCache = new Map();
+
+  // IntersectionObserver for lazy auth-image loading in rows
+  const imgObserver = new IntersectionObserver((entries) => {
+    for (const e of entries) {
+      if (e.isIntersecting) {
+        const img = e.target;
+        const src = img.dataset.authSrc;
+        if (src) { loadAuthImage(img, src); imgObserver.unobserve(img); }
+      }
+    }
+  }, { rootMargin: '200px 0px' });
+
+  const resolveImage = (raw, variant) => {
+    if (!raw) return null;
+    const filled = raw.replace('{imageVariant}', variant);
+    return filled.startsWith('/') ? filled : `/${filled}`;
+  };
+
+  const fmtPrice = (price, currency) => {
+    if (typeof price !== 'number') return '—';
+    const amount = price / 100;
+    try {
+      return new Intl.NumberFormat('en-US', { style: 'currency', currency: currency || 'EUR', maximumFractionDigits: 0 }).format(amount);
+    } catch { return `${amount.toLocaleString()} ${currency || ''}`.trim(); }
+  };
+
+  const fmtLength = (m) => (typeof m === 'number' && m > 0) ? `${m} m` : '—';
+
+  const createRow = (entry) => {
+    const row = document.createElement('div');
+    row.className = 'row' + (selected.has(entry.id) ? ' selected' : '');
+    row.dataset.id = entry.id;
+
+    const mediaSrc = resolveImage(entry.firstImage, THUMB_VARIANT);
+    const moreBadge = entry.imageCount > 1 ? `<span class="more-badge">+${entry.imageCount - 1}</span>` : '';
+
+    row.innerHTML = `
+      <div class="thumb" data-action="gallery">
+        ${mediaSrc ? '' : '<span class="placeholder">No image</span>'}
+        ${moreBadge}
+      </div>
+      <div class="info">
+        <div><div class="field-label">Name</div><div class="field-value name"></div></div>
+        <div><div class="field-label">Charter</div><div class="field-value price"></div></div>
+        <div><div class="field-label">Length</div><div class="field-value len"></div></div>
+        <div><div class="field-label">Location</div><div class="field-value loc"></div></div>
+      </div>
+      <div class="actions">
+        <button class="add-btn" type="button" data-action="add"></button>
+      </div>`;
+
+    if (mediaSrc) {
+      const img = document.createElement('img');
+      img.alt = '';
+      img.dataset.authSrc = mediaSrc;
+      row.querySelector('.thumb').prepend(img);
+      imgObserver.observe(img);
+    }
+
+    row.querySelector('.name').textContent = entry.name;
+    row.querySelector('.price').textContent = entry.price == null ? '—' : `${fmtPrice(entry.price, entry.currency)} /wk`;
+    row.querySelector('.len').textContent = fmtLength(entry.length);
+    const locText = entry.location || '—';
+    const locEl = row.querySelector('.loc');
+    locEl.textContent = locText;
+    locEl.title = locText;
+    row.querySelector('.add-btn').textContent = selected.has(entry.id) ? '✓ ADDED' : 'ADD +';
+    return row;
+  };
+
+  const renderMore = () => {
+    const next = filtered.slice(rendered, rendered + PAGE_SIZE);
+    const frag = document.createDocumentFragment();
+    for (const entry of next) frag.appendChild(createRow(entry));
+    list.appendChild(frag);
+    rendered += next.length;
+  };
+
+  const resetAndRender = () => {
+    list.replaceChildren();
+    rendered = 0;
+    renderMore();
+    countEl.textContent = searchEl.value
+      ? `${filtered.length} of ${allYachts.length}`
+      : `${allYachts.length} yachts`;
+  };
+
+  const applyFilter = () => {
+    const q = searchEl.value.trim().toLowerCase();
+    filtered = q ? allYachts.filter(y => y.searchBlob.includes(q)) : allYachts;
+    resetAndRender();
+  };
+
+  const updateSelUI = () => {
+    const n = selected.size;
+    selCountEl.textContent = `${n} selected`;
+    selCountEl.style.display = n ? '' : 'none';
+    exportBtn.disabled = n === 0;
+  };
+
+  const fetchDetail = async (id) => {
+    if (detailCache.has(id)) return detailCache.get(id);
+    const res = await fetch(`/data/yachts/${id}.json`);
+    if (!res.ok) throw new Error(`Failed to load yacht ${id}: ${res.status}`);
+    const data = await res.json();
+    detailCache.set(id, data);
+    return data;
+  };
+
+  const openGallery = async (entry) => {
+    modalTitle.textContent = entry.name || 'Yacht';
+    hero.innerHTML = '<span style="color:var(--muted);font-size:13px;">Loading…</span>';
+    thumbsEl.innerHTML = '';
+    modal.classList.add('open');
+
+    let detail;
+    try { detail = await fetchDetail(entry.id); }
+    catch (err) {
+      hero.innerHTML = `<span style="color:var(--muted);font-size:13px;">${err.message}</span>`;
+      return;
+    }
+
+    const rawImages = detail.blueprint?.images || [];
+    if (!rawImages.length) {
+      hero.innerHTML = '<span style="color:var(--muted);font-size:13px;">No images available</span>';
+      return;
+    }
+
+    // Hero image
+    const heroImg = document.createElement('img');
+    heroImg.alt = '';
+    hero.replaceChildren(heroImg);
+    loadAuthImage(heroImg, resolveImage(rawImages[0], HERO_VARIANT));
+
+    // Thumbnail strip
+    thumbsEl.innerHTML = rawImages.map((_, i) =>
+      `<div class="t${i === 0 ? ' active' : ''}" data-idx="${i}"><img alt="" /></div>`
+    ).join('');
+    thumbsEl.querySelectorAll('.t').forEach((t) => {
+      const img = t.querySelector('img');
+      loadAuthImage(img, resolveImage(rawImages[Number(t.dataset.idx)], THUMB_VARIANT));
+      t.addEventListener('click', () => {
+        const i = Number(t.dataset.idx);
+        const newHero = document.createElement('img');
+        newHero.alt = '';
+        hero.replaceChildren(newHero);
+        loadAuthImage(newHero, resolveImage(rawImages[i], HERO_VARIANT));
+        thumbsEl.querySelectorAll('.t').forEach(x => x.classList.remove('active'));
+        t.classList.add('active');
+      });
+    });
+  };
+
+  const closeGallery = () => modal.classList.remove('open');
+
+  const exportSelected = async () => {
+    if (!selected.size) return;
+    const ids = Array.from(selected);
+    exportBtn.disabled = true;
+    const originalLabel = exportBtn.textContent;
+    exportBtn.textContent = `Fetching 0 / ${ids.length}…`;
+
+    const results = new Array(ids.length);
+    let done = 0, cursor = 0;
+    const worker = async () => {
+      while (cursor < ids.length) {
+        const i = cursor++;
+        try { results[i] = await fetchDetail(ids[i]); }
+        catch (err) { results[i] = { __error: err.message, id: ids[i] }; }
+        done++;
+        exportBtn.textContent = `Fetching ${done} / ${ids.length}…`;
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(EXPORT_CONCURRENCY, ids.length) }, worker));
+
+    const blob = new Blob([JSON.stringify(results, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `yachts-selected-${results.length}-${new Date().toISOString().replace(/[:.]/g,'-').slice(0,19)}.json`;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+    exportBtn.textContent = originalLabel;
+    exportBtn.disabled = false;
+  };
+
+  // ── Data load ─────────────────────────────────────────────────────────────
+  (async () => {
+    try {
+      const res = await fetch('/data/index.json');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      allYachts = await res.json();
+      filtered = allYachts;
+    } catch (err) {
+      status.textContent = `Failed to load /data/index.json: ${err.message}. Run "npm run build" then "npm start".`;
+      return;
+    }
+
+    status.style.display = 'none';
+    list.style.display = '';
+    resetAndRender();
+    updateSelUI();
+
+    // Infinite scroll
+    new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        if (e.isIntersecting && rendered < filtered.length) renderMore();
+      }
+    }, { rootMargin: '400px 0px' }).observe(sentinel);
+
+    // Events
+    list.addEventListener('click', (e) => {
+      const row = e.target.closest('.row');
+      if (!row) return;
+      const action = e.target.closest('[data-action]')?.dataset.action;
+      const id = row.dataset.id;
+      const entry = allYachts.find(y => y.id === id);
+      if (!entry) return;
+      if (action === 'add') {
+        if (selected.has(id)) selected.delete(id); else selected.add(id);
+        row.classList.toggle('selected', selected.has(id));
+        row.querySelector('.add-btn').textContent = selected.has(id) ? '✓ ADDED' : 'ADD +';
+        updateSelUI();
+      } else if (action === 'gallery') {
+        openGallery(entry);
+      }
+    });
+
+    modalClose.addEventListener('click', closeGallery);
+    modal.addEventListener('click', (e) => { if (e.target === modal) closeGallery(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeGallery(); });
+
+    let searchDebounce;
+    searchEl.addEventListener('input', () => {
+      clearTimeout(searchDebounce);
+      searchDebounce = setTimeout(applyFilter, 80);
+    });
+
+    clearSelBtn.addEventListener('click', () => {
+      selected.clear();
+      list.querySelectorAll('.row.selected').forEach(r => {
+        r.classList.remove('selected');
+        const b = r.querySelector('.add-btn');
+        if (b) b.textContent = 'ADD +';
+      });
+      updateSelUI();
+    });
+
+    exportBtn.addEventListener('click', exportSelected);
+  })();
+}
+
+// ── Boot ────────────────────────────────────────────────────────────────────
+initAuth().catch((err) => {
+  const errEl = document.getElementById('loginError');
+  errEl.textContent = err.message || 'Authentication error. Please try again.';
+  errEl.classList.add('visible');
+  document.getElementById('login-screen').classList.remove('hidden');
+});
+</script>
+</body>
+</html>

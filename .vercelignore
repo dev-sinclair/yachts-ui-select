@@ -1,0 +1,11 @@
+node_modules/
+.env
+.token
+token.js
+yachts_full.json
+yachts.json
+ankor.js
+yachts.js
+openapi.json
+.claude
+server.js
