@@ -35,6 +35,7 @@ function buildEntry(y) {
     price: typeof wp?.price === 'number' ? wp.price : null,
     currency: wp?.currency || null,
     length: typeof y.blueprint?.length === 'number' ? y.blueprint.length : null,
+    sleeps: typeof y.blueprint?.sleeps === 'number' && y.blueprint.sleeps > 0 ? y.blueprint.sleeps : null,
     location,
     firstImage: y.blueprint?.images?.[0] || null,
     imageCount: y.blueprint?.images?.length || 0,
