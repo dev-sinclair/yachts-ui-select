@@ -82,7 +82,9 @@ export default async function handler(req, res) {
       res.status(400).send('Missing path parameter');
       return;
     }
-    const upstreamPath = pathParam.startsWith('/') ? pathParam.slice(1) : pathParam;
+    // Vercel rewrite strips the leading /media/ segment, so add it back
+    const stripped = pathParam.startsWith('/') ? pathParam.slice(1) : pathParam;
+    const upstreamPath = `media/${stripped}`;
 
     let token = await getAccessToken();
     let upstream = await fetchUpstream(upstreamPath, token);
