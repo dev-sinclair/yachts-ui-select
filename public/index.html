@@ -336,7 +336,8 @@ function runApp() {
   let allYachts  = [];
   let filtered   = [];
   let rendered   = 0;
-  const selected    = new Set();
+  const STORAGE_KEY = 'yachts-selected';
+  const selected    = new Set(JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'));
   const detailCache = new Map();
 
   // IntersectionObserver for lazy auth-image loading in rows
@@ -436,6 +437,7 @@ function runApp() {
     selCountEl.textContent = `${n} selected`;
     selCountEl.style.display = n ? '' : 'none';
     exportBtn.disabled = n === 0;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([...selected]));
   };
 
   const fetchDetail = async (id) => {
